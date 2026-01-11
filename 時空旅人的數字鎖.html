@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時空旅人的數字鎖 (英雄進化修正版)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap');
+
+        body {
+            font-family: 'Noto Serif TC', serif; 
+            background-color: #1a1a1a;
+            /* 背景調整：更深邃的冒險色調 */
+            background-image: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #e0e0e0;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 4px 4px 0px #000;
+            color: #ffcc00;
+            font-size: 1.5rem;
+            line-height: 1.5;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* --- 狀態欄容器 --- */
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* 角色頭像框 - 增加金屬質感 */
+        .avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .avatar-box {
+            width: 90px;
+            height: 90px;
+            background: #222;
+            border: 5px solid #ffd700;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 55px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            background-image: radial-gradient(circle, #555, #111);
+            transition: transform 0.3s;
+        }
+
+        /* 進化動畫 */
+        .avatar-box.evolve {
+            animation: evolveFlash 1.5s ease-out;
+            border-color: #fff;
+        }
+        @keyframes evolveFlash {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.2) rotate(5deg); filter: brightness(3) drop-shadow(0 0 30px #fff); border-color: #fff;}
+            100% { transform: scale(1); filter: brightness(1); border-color: #ffd700; }
+        }
+
+        .hero-rank-label {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: #ffd700;
+            text-shadow: 2px 2px 0 #000;
+            margin-top: 5px;
+        }
+
+        .status-bar {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border: 4px solid #5d4037; /* 皮革邊框 */
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        
+        .status-left { display: flex; flex-direction: column; gap: 8px; }
+        .level-info { font-size: 0.8rem; color: #aaa; font-family: 'Press Start 2P', cursive; }
+        .score-info { font-size: 1.2rem; color: #ffcc00; text-shadow: 2px 2px 0 #000; font-weight: bold; }
+        .title-info { font-size: 1.1rem; color: #00e5ff; font-weight: bold; text-shadow: 0 0 5px #00e5ff; }
+        
+        /* --- 修正：5x2 勳章網格 --- */
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 列 */
+            grid-template-rows: repeat(2, 1fr);    /* 2 行 */
+            gap: 8px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .badge-slot {
+            width: 32px;
+            height: 32px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #333; /* 未獲得時是暗的 */
+            border-radius: 4px;
+            transition: all 0.5s;
+        }
+        
+        .badge-slot.earned {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            border-color: #fff;
+            color: #000;
+            box-shadow: 0 0 10px #ffd700;
+            transform: scale(1.1);
+        }
+
+        /* 啟動遮罩 */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.96);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.5s;
+        }
+        #overlay h2 { 
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.5rem; 
+            margin-bottom: 20px; 
+            color: #ffcc00;
+            animation: pulseText 1s infinite;
+        }
+        @keyframes pulseText { 0% { opacity: 1; text-shadow: 0 0 10px #ffcc00; } 50% { opacity: 0.7; text-shadow: 0 0 0 #000; } 100% { opacity: 1; text-shadow: 0 0 10px #ffcc00; } }
+
+        /* 石板區域 */
+        .ruin-tablet {
+            background: #222;
+            padding: 25px;
+            border-radius: 8px;
+            border: 4px solid #666;
+            box-shadow: 0 10px 0px #111;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 950px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .ruin-tablet.door-open { border-color: #ffd700; box-shadow: 0 0 40px rgba(255, 215, 0, 0.5); }
+        .ruin-tablet.cheated { border-color: #555; filter: grayscale(1) opacity(0.7); }
+
+        .digit {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 24px;
+            color: #777;
+            margin: 0 5px;
+            text-shadow: 2px 2px 0 #000;
+        }
+        .digit.linked { color: #ff5252; text-shadow: 0 0 10px #ff0000; }
+
+        /* 運算符按鈕 */
+        .gem-btn {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            border: 3px solid #000;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 20px;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2px;
+            box-shadow: inset -3px -3px 0 rgba(0,0,0,0.5);
+            border-radius: 4px;
+        }
+        .gem-btn:active { transform: translateY(3px); box-shadow: none; }
+        .gem-btn.plus { background: #d32f2f; color: #fff; border-color: #b71c1c; }
+        .gem-btn.minus { background: #1976d2; color: #fff; border-color: #0d47a1; }
+
+        .equals-sign { font-size: 24px; margin: 0 10px; color: #fff; font-family: 'Press Start 2P'; }
+        
+        .target-rune {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 32px;
+            color: #ffd700;
+            text-shadow: 3px 3px 0 #000;
+            padding: 0 10px;
+        }
+
+        .calc-display {
+            background: #000;
+            border: 2px solid #555;
+            color: #0f0; 
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.2);
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        /* 控制區 */
+        .controls { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 15px; }
+
+        button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 16px 12px;
+            border: 4px solid #000;
+            background: #e0e0e0;
+            color: #000;
+            cursor: pointer;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+            text-transform: uppercase;
+        }
+        button:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0px rgba(0,0,0,0.5); }
+        button:hover { background: #fff; }
+
+        button.unlock-btn { background: #ffeb3b; color: #000; }
+        button.next-level-btn { background: #444; color: #888; border-color: #333; }
+        button.next-level-btn.active { 
+            background: linear-gradient(to bottom, #ff5722, #e64a19); 
+            color: #fff; 
+            border-color: #bf360c;
+            animation: pulseBtn 2s infinite;
+        }
+        @keyframes pulseBtn { 0% { filter: brightness(1); } 50% { filter: brightness(1.2); } 100% { filter: brightness(1); } }
+
+        /* 特殊按鈕：一鍵換號 */
+        button.toggle-all-btn {
+            background: #ab47bc; 
+            color: #fff;
+            border-color: #4a148c;
+        }
+        button.toggle-all-btn:hover { background: #ba68c8; }
+
+        button.giveup-btn { background: #333; color: #aaa; border-color: #222; }
+        button.giveup-btn:hover { background: #555; color: #fff; }
+
+        #message {
+            height: 30px;
+            margin-top: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            font-family: 'Noto Serif TC', serif;
+        }
+        .msg-success { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .msg-error { color: #ff5252; }
+        .msg-info { color: #40c4ff; }
+
+        .mute-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #222;
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 20px;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 100;
+            border-radius: 50%;
+        }
+
+    </style>
+</head>
+<body>
+
+    <button class="mute-toggle" onclick="toggleMute()" id="muteBtn">🔊</button>
+
+    <div id="overlay" onclick="startExperience()">
+        <h2>⚔️ 點擊開始英雄試煉 ⚔️</h2>
+        <p>[ 系統：準備你的冒險... ]</p>
+    </div>
+
+    <div class="status-container">
+        <div class="avatar-section">
+            <div class="avatar-box" id="hero-avatar">😶</div>
+            <div class="hero-rank-label">HERO</div>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-left">
+                <div class="level-info">LV.<span id="current-level">1</span> / 100</div>
+                <div class="score-info">EXP: <span id="current-score">0</span></div>
+                <div class="title-info">稱號: <span id="current-title">村民</span></div>
+            </div>
+            
+            <div class="badge-grid" id="badges-row">
+                </div>
+        </div>
+    </div>
+
+    <h1>時空旅人的數字鎖</h1>
+    
+    <div class="ruin-tablet" id="board"></div>
+
+    <div class="calc-display">
+        能量偵測: <span id="current-sum">123456789</span>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="controls">
+        <button id="check-btn" class="unlock-btn" onclick="checkAnswer()">驗證機關</button>
+        <button id="next-btn" class="next-level-btn" onclick="nextLevel()" disabled>下一層 >></button>
+        
+        <button id="toggle-btn" class="toggle-all-btn" onclick="cycleOperators()">全換加號 (+)</button>
+        
+        <button class="giveup-btn" onclick="solvePuzzle()">放棄看解答</button>
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // 遊戲數據 & 角色配置
+        // ----------------------------------------------------
+        let currentLevel = 1;
+        let scoreWins = 0; 
+        const maxLevel = 100;
+        let isSolved = false; 
+        let isCheated = false; 
+
+        // 形象數據：初始0分是村民，10分變見習勇者
+        const rpgData = {
+            0:  { title: "村民",     avatar: "😶" },
+            1:  { title: "見習勇者", avatar: "🗡️" }, // 第一次進化！
+            2:  { title: "遺跡獵人", avatar: "🏹" },
+            3:  { title: "解謎大師", avatar: "📜" },
+            4:  { title: "王國騎士", avatar: "🛡️" },
+            5:  { title: "傳奇探險家", avatar: "🤠" },
+            6:  { title: "大魔導士", avatar: "🧙‍♂️" },
+            7:  { title: "屠龍者",   avatar: "🐉" },
+            8:  { title: "時空守衛", avatar: "⏳" },
+            9:  { title: "半神英雄", avatar: "👼" },
+            10: { title: "新世界的神", avatar: "👑" }
+        };
+
+        // ----------------------------------------------------
+        // RPG 冒險音樂引擎 (優化版)
+        // ----------------------------------------------------
+        let audioCtx;
+        let masterGain;
+        let isMuted = false;
+        let isPlaying = false;
+        let nextNoteTime = 0.0;
+        let timerID;
+        let current16thNote = 0; 
+        let barCount = 0;
+        const tempo = 125.0; 
+        const lookahead = 25.0; 
+        const scheduleAheadTime = 0.1; 
+
+        const chordProgression = [
+            { root: 82.41, type: 'Em' }, 
+            { root: 65.41, type: 'C'  }, 
+            { root: 73.42, type: 'D'  }, 
+            { root: 82.41, type: 'Em' }  
+        ];
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGain = audioCtx.createGain();
+                masterGain.connect(audioCtx.destination);
+                masterGain.gain.value = 0.5;
+            }
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        }
+
+        function scheduler() {
+            while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+                scheduleNote(current16thNote, nextNoteTime);
+                nextNote();
+            }
+            timerID = window.setTimeout(scheduler, lookahead);
+        }
+
+        function nextNote() {
+            const secondsPerBeat = 60.0 / tempo;
+            nextNoteTime += 0.25 * secondsPerBeat;
+            current16thNote++;
+            if (current16thNote === 16) {
+                current16thNote = 0;
+                barCount = (barCount + 1) % 4;
+            }
+        }
+
+        function scheduleNote(beatNumber, time) {
+            if (isMuted) return;
+            const currentChord = chordProgression[barCount];
+            const root = currentChord.root;
+
+            if (beatNumber === 0 || beatNumber === 8) playKick(time);
+            if (beatNumber === 4 || beatNumber === 12) playSnare(time);
+            if (beatNumber === 10) playKick(time, 0.6); 
+            if (beatNumber % 4 === 0) playHiHat(time);
+            if (beatNumber % 4 === 0 || beatNumber % 4 === 3) playBass(time, root);
+            if (beatNumber % 2 === 0) { 
+                let intervals = [1, 1.2, 1.5, 2];
+                let interval = intervals[Math.floor(Math.random() * intervals.length)];
+                if(Math.random() > 0.7) playArp(time, root * interval * 2); 
+                else playArp(time, root * interval);
+            }
+        }
+
+        function playKick(time, vol=1.0) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+            gain.gain.setValueAtTime(0.8 * vol, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+            osc.connect(gain); gain.connect(masterGain); osc.start(time); osc.stop(time + 0.5);
+        }
+        function playSnare(time) {
+            const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < noiseBuffer.length; i++) output[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource(); noise.buffer = noiseBuffer;
+            const noiseFilter = audioCtx.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = 1000;
+            const noiseGain = audioCtx.createGain(); noiseGain.gain.setValueAtTime(0.6, time); noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+            noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(masterGain); noise.start(time);
+        }
+        function playHiHat(time) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = 'square'; osc.frequency.value = 8000;
+            const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 10000;
+            gain.gain.setValueAtTime(0.15, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.connect(filter); filter.connect(gain); gain.connect(masterGain); osc.start(time); osc.stop(time + 0.1);
+        }
+        function playBass(time, freq) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time);
+            const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(freq * 4, time); filter.frequency.exponentialRampToValueAtTime(freq, time + 0.1);
+            gain.gain.setValueAtTime(0.3, time); gain.gain.linearRampToValueAtTime(0, time + 0.15);
+            osc.connect(filter); filter.connect(gain); gain.connect(masterGain); osc.start(time); osc.stop(time + 0.2);
+        }
+        function playArp(time, freq) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = 'square'; osc.frequency.setValueAtTime(freq * 2, time);
+            gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+            osc.connect(gain); gain.connect(masterGain); osc.start(time); osc.stop(time + 0.3);
+        }
+
+        function startMusic() { if (isPlaying) return; initAudio(); isPlaying = true; nextNoteTime = audioCtx.currentTime + 0.1; scheduler(); }
+        function stopMusic() { isPlaying = false; clearTimeout(timerID); }
+        function toggleMute() { isMuted = !isMuted; document.getElementById('muteBtn').innerText = isMuted ? "🔇" : "🔊"; }
+
+        // SFX Helper
+        function playSfxTone(freq, type, duration) {
+            if (!audioCtx || isMuted) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(masterGain); osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+        function sfxClick() { playSfxTone(600, 'square', 0.1); }
+        function sfxLink() { playSfxTone(300, 'triangle', 0.1); }
+        function sfxSuccess() { const now = audioCtx.currentTime; [523, 659, 783, 1046, 1318, 1567].forEach((f, i) => { setTimeout(() => playSfxTone(f, 'square', 0.2), i * 80); }); }
+        function sfxError() { playSfxTone(150, 'sawtooth', 0.3); setTimeout(() => playSfxTone(100, 'sawtooth', 0.3), 150); }
+        function sfxCheated() { playSfxTone(100, 'sawtooth', 0.5); }
+        function sfxBadge() { setTimeout(() => { playSfxTone(880, 'square', 0.4); setTimeout(() => playSfxTone(1760, 'square', 0.6), 100); }, 500); }
+        function sfxToggle() { playSfxTone(1200, 'sine', 0.1); } 
+
+        // ----------------------------------------------------
+        // 遊戲邏輯 (UI 與交互)
+        // ----------------------------------------------------
+        
+        let operatorStates = [0, 0, 0, 0, 0, 0, 0, 0]; 
+        const symbols = ['', '+', '-'];
+        let targetNumber = 100;
+        
+        // 切換按鈕的狀態：0=準備全+, 1=準備全-, 2=準備全空
+        let globalToggleState = 0; 
+
+        function startExperience() {
+            const overlay = document.getElementById('overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+            startMusic();
+            initBadges(); 
+            // 初始化角色形象
+            updateRank(0);
+            generateRandomProblem(true); 
+        }
+
+        function initBadges() {
+            const container = document.getElementById('badges-row');
+            container.innerHTML = '';
+            for(let i=1; i<=10; i++) {
+                let badge = document.createElement('div');
+                badge.className = 'badge-slot';
+                badge.id = `badge-${i}`;
+                badge.innerText = '★'; // 初始圖案
+                container.appendChild(badge);
+            }
+        }
+
+        function initBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            for (let i = 1; i <= 9; i++) {
+                const numSpan = document.createElement('span');
+                numSpan.className = 'digit';
+                numSpan.id = `digit-${i}`;
+                numSpan.innerText = i;
+                board.appendChild(numSpan);
+
+                if (i < 9) {
+                    const btn = document.createElement('button');
+                    btn.className = 'gem-btn';
+                    btn.id = `op-${i}`;
+                    btn.onclick = () => toggleOperator(i - 1);
+                    btn.innerText = ''; 
+                    board.appendChild(btn);
+                }
+            }
+            const equalsSpan = document.createElement('span'); equalsSpan.className = 'equals-sign'; equalsSpan.innerText = '='; board.appendChild(equalsSpan);
+            const targetSpan = document.createElement('span'); targetSpan.className = 'target-rune'; targetSpan.id = 'target-display'; targetSpan.innerText = targetNumber; board.appendChild(targetSpan);
+
+            updateBoardVisuals();
+            calculateCurrent();
+        }
+
+        function toggleOperator(index) {
+            if(isSolved) return; 
+            operatorStates[index] = (operatorStates[index] + 1) % 3;
+            if(operatorStates[index] === 0) sfxLink(); else sfxClick(); 
+            updateBoardVisuals();
+            calculateCurrent();
+            
+            const msg = document.getElementById('message');
+            if(msg.className.includes('msg-error')) { msg.innerText = ''; msg.className = ''; }
+        }
+
+        // 一鍵切換邏輯
+        function cycleOperators() {
+            if(isSolved) return;
+            
+            let targetValue;
+            let btnText;
+            
+            // 邏輯：全加(+) -> 全減(-) -> 全清空(Link)
+            if(globalToggleState === 0) {
+                targetValue = 1; // +
+                btnText = "全換減號 (-)";
+                globalToggleState = 1;
+            } else if (globalToggleState === 1) {
+                targetValue = 2; // -
+                btnText = "全部清空 (Link)";
+                globalToggleState = 2;
+            } else {
+                targetValue = 0; // Link
+                btnText = "全換加號 (+)";
+                globalToggleState = 0;
+            }
+            
+            for(let i=0; i<8; i++) {
+                operatorStates[i] = targetValue;
+            }
+
+            document.getElementById('toggle-btn').innerText = btnText;
+            updateBoardVisuals();
+            calculateCurrent();
+            sfxToggle();
+        }
+
+        function updateBoardVisuals() {
+            operatorStates.forEach((state, index) => {
+                const btn = document.getElementById(`op-${index + 1}`);
+                if(!btn) return;
+                btn.className = 'gem-btn'; btn.innerText = ''; btn.classList.remove('plus', 'minus');
+                if (state === 1) { btn.classList.add('plus'); btn.innerText = '+'; } 
+                else if (state === 2) { btn.classList.add('minus'); btn.innerText = '-'; }
+            });
+            for(let i=1; i<=9; i++) {
+                let isLinked = false;
+                if (i > 1 && operatorStates[i-2] === 0) isLinked = true;
+                if (i < 9 && operatorStates[i-1] === 0) isLinked = true;
+                const digitEl = document.getElementById(`digit-${i}`);
+                if(isLinked) digitEl.classList.add('linked'); else digitEl.classList.remove('linked');
+            }
+        }
+
+        function getExpressionFromStates(states) {
+            let expression = "";
+            for (let i = 0; i < 8; i++) { expression += (i + 1); expression += symbols[states[i]]; }
+            expression += "9";
+            return expression;
+        }
+
+        function calculateCurrent() {
+            const expression = getExpressionFromStates(operatorStates);
+            try {
+                const result = new Function('return ' + expression)();
+                document.getElementById('current-sum').innerText = result;
+                return result;
+            } catch (e) { return NaN; }
+        }
+
+        function checkAnswer() {
+            const current = calculateCurrent();
+            const msg = document.getElementById('message');
+            const board = document.getElementById('board');
+            const checkBtn = document.getElementById('check-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const toggleBtn = document.getElementById('toggle-btn');
+            
+            if (current === targetNumber) {
+                isSolved = true;
+                checkBtn.disabled = true; 
+                toggleBtn.disabled = true; 
+                nextBtn.disabled = false;
+                nextBtn.classList.add('active');
+
+                if (isCheated) {
+                    board.classList.add('cheated'); 
+                    msg.innerText = "雖已過關，但榮耀不屬於作弊者...";
+                    msg.className = "msg-error"; 
+                    sfxCheated(); 
+                } else {
+                    board.classList.add('door-open'); 
+                    scoreWins++; 
+                    document.getElementById('current-score').innerText = scoreWins;
+                    sfxSuccess();
+                    
+                    if (scoreWins % 10 === 0) {
+                        let badgeIdx = Math.min(scoreWins / 10, 10);
+                        awardBadge(badgeIdx);
+                        updateRank(badgeIdx); // 進化！
+                        msg.innerText = `進化！晉升為：【${rpgData[badgeIdx].title}】`;
+                        msg.className = "msg-success"; 
+                    } else {
+                        msg.innerText = "機關破解成功！";
+                        msg.className = "msg-success";
+                    }
+                }
+
+            } else {
+                msg.innerText = "計算錯誤！重來！";
+                msg.className = "msg-error";
+                board.classList.remove('door-open');
+                sfxError();
+            }
+        }
+
+        function awardBadge(index) {
+            const badge = document.getElementById(`badge-${index}`);
+            if(badge) {
+                badge.innerText = "🏅"; 
+                badge.classList.add('earned');
+                sfxBadge();
+            }
+        }
+        
+        // 更新稱號與頭像 (關鍵進化邏輯)
+        function updateRank(index) {
+            const titleEl = document.getElementById('current-title');
+            const avatarEl = document.getElementById('hero-avatar');
+            const newData = rpgData[index];
+
+            if(titleEl && avatarEl && newData) {
+                // 更新
+                titleEl.innerText = newData.title;
+                avatarEl.innerText = newData.avatar;
+                
+                // 播放進化動畫
+                if(index > 0) {
+                    avatarEl.classList.add('evolve');
+                    setTimeout(() => avatarEl.classList.remove('evolve'), 1500);
+                }
+            }
+        }
+
+        function nextLevel() {
+            if(currentLevel >= maxLevel) { alert("恭喜通關！傳說達成！"); return; }
+            currentLevel++;
+            document.getElementById('current-level').innerText = currentLevel;
+            
+            const nextBtn = document.getElementById('next-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const toggleBtn = document.getElementById('toggle-btn');
+            const msg = document.getElementById('message');
+            const board = document.getElementById('board');
+
+            nextBtn.classList.remove('active'); nextBtn.disabled = true;
+            checkBtn.disabled = false; toggleBtn.disabled = false;
+            
+            msg.innerText = ""; msg.className = "";
+            board.classList.remove('door-open'); board.classList.remove('cheated');
+            
+            generateRandomProblem(false);
+        }
+
+        function updateTargetDisplay(num) {
+            targetNumber = num;
+            document.getElementById('target-display').innerText = targetNumber;
+        }
+
+        function generateRandomProblem(isInit = false) {
+            isSolved = false; isCheated = false; 
+            document.getElementById('check-btn').disabled = false;
+            document.getElementById('toggle-btn').disabled = false;
+            document.getElementById('next-btn').disabled = true;
+            
+            initBoard();
+
+            // 重置按鈕狀態
+            globalToggleState = 0;
+            document.getElementById('toggle-btn').innerText = "全換加號 (+)";
+
+            let valid = false;
+            let tempTarget = 0;
+            let attempts = 0;
+            while (!valid && attempts < 2000) {
+                let tempStates = [];
+                for(let i=0; i<8; i++) {
+                    const rand = Math.random();
+                    if(rand < 0.25) tempStates.push(0); else if(rand < 0.625) tempStates.push(1); else tempStates.push(2);
+                }
+                const exp = getExpressionFromStates(tempStates);
+                const result = new Function('return ' + exp)();
+                if (Number.isInteger(result) && result >= 0 && result <= 100) { tempTarget = result; valid = true; }
+                attempts++;
+            }
+            if (valid) {
+                updateTargetDisplay(tempTarget);
+                operatorStates = [0, 0, 0, 0, 0, 0, 0, 0];
+                updateBoardVisuals();
+                calculateCurrent();
+                document.getElementById('message').innerText = "遭遇新謎題！";
+                document.getElementById('message').className = "msg-info";
+            }
+        }
+
+        function solvePuzzle() {
+            if(isSolved) return; 
+            isCheated = true;
+            const msg = document.getElementById('message');
+            msg.innerText = "使用禁術...無法獲得榮耀。";
+            msg.className = "msg-error";
+            
+            let found = false;
+            let solutionStates = [];
+            for (let i = 0; i < 6561; i++) {
+                let tempStates = []; let tempVal = i;
+                for (let pos = 0; pos < 8; pos++) { tempStates.push(tempVal % 3); tempVal = Math.floor(tempVal / 3); }
+                const exp = getExpressionFromStates(tempStates);
+                const result = new Function('return ' + exp)();
+                if (result === targetNumber) { solutionStates = tempStates; found = true; break; }
+            }
+            if (found) {
+                operatorStates = solutionStates;
+                updateBoardVisuals(); calculateCurrent(); sfxCheated();
+            }
+        }
+    </script>
+</body>
+</html>
